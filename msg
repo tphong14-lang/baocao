@@ -1,0 +1,1412 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MSG REPORT HUB - Kỹ Thuật & Ngân Sách</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #f4f7fb; --card: #ffffff; --ink: #1e293b; --muted: #64748b; --line: #e2e8f0;
+  --primary: #0056b3; --primary-hover: #004494;
+  --good: #16a34a; --warn: #eab308; --danger: #dc2626;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--ink); display: flex; height: 100vh; overflow: hidden; }
+
+.side { width: 240px; background: #fff; border-right: 1px solid var(--line); display: flex; flex-direction: column; flex-shrink: 0; }
+.logo { padding: 20px; font-size: 18px; font-weight: 800; color: var(--primary); border-bottom: 1px solid var(--line); }
+.logo span { font-size: 11px; display: block; color: var(--muted); font-weight: 500; margin-top: 3px; }
+.nav { padding: 15px 10px; flex: 1; overflow-y: auto; }
+.nav button { width: 100%; border: 0; background: transparent; padding: 11px 14px; text-align: left; font-size: 13.5px; font-weight: 600; color: #475569; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; gap: 8px; align-items: center; }
+.nav button.active, .nav button:hover { background: #eff6ff; color: var(--primary); }
+
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.top { height: 60px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
+.top .title { font-weight: 700; font-size: 16px; }
+.top-actions { display: flex; gap: 10px; }
+.content { flex: 1; padding: 25px; overflow-y: auto; }
+
+.btn { border: 0; padding: 8px 14px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; background: var(--primary); color: #fff; display: inline-flex; align-items: center; gap: 5px; }
+.btn:hover { background: var(--primary-hover); }
+.btn-outline { background: #fff; border: 1px solid var(--line); color: var(--ink); }
+.btn-outline:hover { background: #f8fafc; }
+.btn-success { background: var(--good); }
+.btn-success:hover { background: #15803d; }
+.btn-warning { background: #d97706; color: #fff; }
+.btn-warning:hover { background: #b45309; }
+.btn-action { border: 1px solid var(--line); background: #fff; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 12px; }
+.btn-action:hover { background: #f1f5f9; }
+
+.view { display: none; }
+.view.active { display: block; }
+
+.cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+.card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; position: relative; }
+.card .label { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; }
+.card .val { font-size: 22px; font-weight: 800; margin: 8px 0; }
+.meter { height: 6px; background: #e2e8f0; border-radius: 99px; overflow: hidden; margin-top: 8px; }
+.meter i { display: block; height: 100%; border-radius: 99px; }
+
+.domains-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.domain-card { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+.domain-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.domain-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 6px; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 99px; font-weight: 700; display: inline-block; }
+.tag.safe { background: #dcfce7; color: var(--good); }
+.tag.warn { background: #fef9c3; color: #a16207; }
+.tag.alert { background: #fee2e2; color: var(--danger); }
+.tag.gray { background: #f1f5f9; color: #475569; }
+
+.panel { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+.table-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 10px; flex-wrap: wrap; }
+.table-header select, .table-header input { padding: 8px 12px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; outline: none; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+th, td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+th { background: #f8fafc; color: var(--muted); font-weight: 700; }
+tr:hover td { background: #f8fafc; }
+
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 99; align-items: center; justify-content: center; }
+.modal-box { background: #fff; border-radius: 10px; width: 500px; padding: 22px; max-height: 90vh; overflow-y: auto; }
+.form-group { margin-bottom: 12px; }
+.form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; }
+.form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; font-size: 13px; }
+
+.ai-layout { display: grid; grid-template-columns: 1fr 320px; gap: 20px; height: calc(100vh - 130px); }
+.ai-chatbox { background: #fff; border: 1px solid var(--line); border-radius: 10px; display: flex; flex-direction: column; overflow: hidden; }
+.ai-logs { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; }
+.ai-msg { margin-bottom: 15px; max-width: 90%; font-size: 13.5px; line-height: 1.6; padding: 14px 18px; border-radius: 12px; }
+.ai-msg.bot { background: #ffffff; border: 1px solid var(--line); box-shadow: 0 1px 3px rgba(0,0,0,0.03); color: var(--ink); align-self: flex-start; }
+.ai-msg.user { background: var(--primary); color: #fff; margin-left: auto; border-bottom-right-radius: 2px; }
+.ai-input-bar { display: flex; gap: 10px; padding: 15px; background: #fff; border-top: 1px solid var(--line); }
+.ai-input-bar input { flex: 1; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; outline: none; }
+.ai-sidebar { display: flex; flex-direction: column; gap: 15px; }
+.quick-btn { width: 100%; text-align: left; padding: 10px 12px; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; font-weight: 600; cursor: pointer; color: #334155; transition: 0.2s; margin-bottom: 6px; }
+.quick-btn:hover { border-color: var(--primary); color: var(--primary); background: #f0f7ff; }
+
+/* PRINT STYLES */
+@media print {
+  @page { size: A4 portrait; margin: 15mm 10mm 15mm 10mm; }
+  html, body { height: auto !important; overflow: visible !important; background: #ffffff !important; color: #000000 !important; }
+  .side, .top, .nav, .btn, .table-header, .search-box, .btn-action, .ai-layout, .cards-grid, .no-print { display: none !important; }
+  .main { margin: 0 !important; width: 100% !important; overflow: visible !important; }
+  .content { padding: 0 !important; overflow: visible !important; }
+  .view { display: none !important; }
+  #view-report { display: block !important; }
+  .panel { border: 0 !important; padding: 0 !important; margin-bottom: 15mm !important; box-shadow: none !important; }
+  .page-break { page-break-before: always !important; }
+  table { width: 100% !important; border-collapse: collapse !important; margin-bottom: 15px !important; }
+  tr { page-break-inside: avoid; }
+  th, td { border: 1px solid #94a3b8 !important; padding: 6px 8px !important; font-size: 10pt !important; color: #000 !important; white-space: normal !important; }
+  th { background-color: #f1f5f9 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+
+<aside class="side">
+  <div class="logo">MSG REPORT HUB<span>Phòng Kỹ Thuật • Mắt Sài Gòn TN</span></div>
+  <div class="nav">
+    <button class="active" onclick="switchView('dashboard', this)">📊 Giám sát ngân sách</button>
+    <button onclick="switchView('tasks', this)">📋 Công việc & Tồn đọng</button>
+    <button onclick="switchView('expenses', this)">💰 Sổ chi tiêu & Mua sắm</button>
+    <button onclick="switchView('debts', this)">💳 Quản lý Công nợ NCC</button>
+    <button onclick="switchView('report', this)">📄 Báo cáo Ban Giám Đốc</button>
+    <button onclick="switchView('ai', this)">🤖 Trợ lý MSG AI</button>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="top">
+    <div class="title" id="topTitle">Tổng quan Giám sát Ngân sách Kỹ thuật</div>
+    <div class="top-actions" id="topActionBtns">
+      <button class="btn btn-warning" onclick="openDbModal()">💾 Quản lý DB</button>
+      <button class="btn btn-outline" onclick="openQuotaModal()">⚙️ Cài đặt ngân sách</button>
+      <button class="btn btn-success" onclick="openExpenseModal()">＋ Nhập khoản mua sắm</button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- 1. DASHBOARD -->
+    <section id="view-dashboard" class="view active">
+      <div class="cards-grid">
+        <div class="card">
+          <div class="label">Tổng Ngân Sách Được Giao</div>
+          <div class="val" id="kpiTotal">0 đ</div>
+          <div style="font-size:12px; color:var(--muted);">Được phê duyệt 2026</div>
+        </div>
+        <div class="card">
+          <div class="label">Đã Giải Ngân (Thực chi)</div>
+          <div class="val" id="kpiSpent" style="color:var(--danger)">0 đ</div>
+          <div class="meter"><i id="kpiSpentBar" style="width:0%; background:var(--danger)"></i></div>
+        </div>
+        <div class="card">
+          <div class="label">Hạn Mức Còn Lại</div>
+          <div class="val" id="kpiRemain" style="color:var(--good)">0 đ</div>
+          <div style="font-size:12px; color:var(--muted);" id="kpiRemainPercent">Còn 0%</div>
+        </div>
+        <div class="card">
+          <div class="label">Trạng Thái Toàn Bộ</div>
+          <div class="val" id="kpiStatus" style="font-size: 16px; margin-top: 14px;">Bình thường</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:15px; margin-bottom:12px; color:#334155;">Chi tiết Hạn mức theo Các Nguồn Ngân Sách</h3>
+      <div class="domains-grid" id="domainCards"></div>
+
+      <div class="panel">
+        <h3 style="font-size:14px; margin-bottom:12px;">Các khoản chi gần nhất</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Ngày</th><th>Mảng</th><th>Hạng mục</th><th>Nội dung chi tiết</th><th>Số tiền</th></tr>
+            </thead>
+            <tbody id="recentTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. QUẢN LÝ CÔNG VIỆC & TỒN ĐỌNG -->
+    <section id="view-tasks" class="view">
+      <div class="cards-grid">
+        <div class="card">
+          <div class="label">Việc Phát Sinh Hôm Nay</div>
+          <div class="val" id="kpiTaskToday">0</div>
+          <div style="font-size:12px; color:var(--primary);">Tiếp nhận trong ngày</div>
+        </div>
+        <div class="card">
+          <div class="label">Việc Đang Tồn Đọng</div>
+          <div class="val" id="kpiTaskPending" style="color:#d97706;">0</div>
+          <div style="font-size:12px; color:var(--muted);">Chưa hoàn thành</div>
+        </div>
+        <div class="card">
+          <div class="label">Tồn Đọng Quá Lâu (>7 Ngày)</div>
+          <div class="val" id="kpiTaskOverdue" style="color:var(--danger);">0</div>
+          <div style="font-size:12px; color:var(--danger); font-weight:bold;">⚠️ Cần xử lý gấp</div>
+        </div>
+        <div class="card">
+          <div class="label">Quan Trọng / Khẩn Cấp</div>
+          <div class="val" id="kpiTaskUrgent" style="color:#7c3aed;">0</div>
+          <div style="font-size:12px; color:var(--muted);">Ảnh hưởng vận hành</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="table-header">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select id="filterTaskDomain" onchange="renderTasks()">
+              <option value="">Tất cả mảng</option>
+              <option value="Biomed">Biomed (Thiết bị Y tế)</option>
+              <option value="Hạ tầng">Hạ tầng (Điện, lạnh, nước)</option>
+              <option value="IT">IT (Mạng, EMR, máy in)</option>
+              <option value="Khác">Khác / Mua sắm</option>
+            </select>
+            <select id="filterTaskStatus" onchange="renderTasks()">
+              <option value="">Tất cả trạng thái</option>
+              <option value="Chờ xử lý">Chờ xử lý</option>
+              <option value="Đang làm">Đang làm</option>
+              <option value="Hoàn thành">Hoàn thành</option>
+              <option value="overdue">⚠️ Tồn quá lâu (>7 ngày)</option>
+            </select>
+            <input type="text" id="searchTask" placeholder="Tìm tên việc, người phụ trách..." onkeyup="renderTasks()">
+          </div>
+          <div>
+            <button class="btn btn-outline" onclick="triggerPrint()">🖨 In Báo Cáo</button>
+            <button class="btn btn-success" onclick="openTaskModal()">＋ Tiếp nhận việc mới</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ngày tiếp nhận</th><th>Mảng</th><th>Mức độ</th><th>Nội dung công việc</th><th>Thời gian tồn</th><th>Người phụ trách</th><th>Trạng thái</th><th style="text-align:center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="taskTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. EXPENSES -->
+    <section id="view-expenses" class="view">
+      <div class="panel">
+        <div class="table-header">
+          <div style="display:flex; gap:10px;">
+            <select id="filterDomain" onchange="renderExpenses()">
+              <option value="">Tất cả mảng</option>
+              <option value="Biomed">Biomed</option>
+              <option value="Hạ tầng">Hạ tầng</option>
+              <option value="IT">IT</option>
+              <option value="Khác">Khác / Dự phòng</option>
+            </select>
+            <input type="text" id="searchDesc" placeholder="Tìm theo nội dung, nhà cung cấp..." onkeyup="renderExpenses()">
+          </div>
+          <div>
+            <button class="btn btn-outline" onclick="exportToExcel()">📊 Xuất File Excel</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tháng</th><th>Mảng</th><th>Tính chất chi</th><th>Nội dung chi tiết</th><th>Đơn giá</th><th>SL</th><th>Thành tiền</th><th>Nhà cung cấp</th><th style="text-align:center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. DANH MỤC CÔNG NỢ NHÀ CUNG CẤP -->
+    <section id="view-debts" class="view">
+      <div class="cards-grid">
+        <div class="card">
+          <div class="label">Tổng Giá Trị Hợp Đồng</div>
+          <div class="val" id="kpiDebtTotal">0 đ</div>
+          <div style="font-size:12px; color:var(--muted);">Tất cả các gói thầu/mua sắm</div>
+        </div>
+        <div class="card">
+          <div class="label">Đã Thanh Toán</div>
+          <div class="val" id="kpiDebtPaid" style="color:var(--good);">0 đ</div>
+          <div style="font-size:12px; color:var(--muted);" id="kpiDebtPaidPercent">Đã trả 0%</div>
+        </div>
+        <div class="card">
+          <div class="label">Tổng Công Nợ Còn Lại</div>
+          <div class="val" id="kpiDebtRemain" style="color:var(--danger);">0 đ</div>
+          <div style="font-size:12px; color:var(--danger); font-weight:bold;">Chưa thanh toán</div>
+        </div>
+        <div class="card">
+          <div class="label">Nợ Kéo Dài (>60 Ngày)</div>
+          <div class="val" id="kpiDebtOverdue" style="color:#d97706;">0</div>
+          <div style="font-size:12px; color:var(--muted);">Nhà cung cấp cần đối soát</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="table-header">
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <select id="filterDebtDomain" onchange="renderDebts()">
+              <option value="">Tất cả mảng kỹ thuật</option>
+              <option value="Biomed">Biomed</option>
+              <option value="Hạ tầng">Hạ tầng</option>
+              <option value="IT">IT</option>
+              <option value="Khác">Khác</option>
+            </select>
+            <select id="filterDebtStatus" onchange="renderDebts()">
+              <option value="">Tất cả tình trạng nợ</option>
+              <option value="pending">Còn nợ</option>
+              <option value="overdue">⚠️ Nợ lâu (>60 ngày)</option>
+              <option value="cleared">Đã thanh toán hết (0 đ)</option>
+            </select>
+            <input type="text" id="searchDebt" placeholder="Tìm tên nhà cung cấp, gói thầu..." onkeyup="renderDebts()">
+          </div>
+          <div>
+            <button class="btn btn-outline" onclick="exportDebtToExcel()">📊 Xuất Excel Công Nợ</button>
+            <button class="btn btn-success" onclick="openDebtModal()">＋ Thêm hợp đồng / công nợ</button>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ngày HĐ / Hóa đơn</th>
+                <th>Mảng</th>
+                <th>Tên Nhà Cung Cấp</th>
+                <th>Nội dung gói thầu / Dịch vụ</th>
+                <th>Giá trị Hợp đồng</th>
+                <th>Đã thanh toán</th>
+                <th>Số tiền còn nợ</th>
+                <th>Thời gian đã nợ</th>
+                <th>Tình trạng</th>
+                <th style="text-align:center;">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="debtTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 5. REPORT CHO BAN GIÁM ĐỐC -->
+    <section id="view-report" class="view">
+      <div class="panel">
+        <div class="table-header no-print">
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <h2 style="font-size: 18px; color: var(--primary);">BÁO CÁO GIÁM SÁT KỸ THUẬT & NGÂN SÁCH</h2>
+            <select id="reportDomainFilter" onchange="renderExecutiveReport()" style="font-weight: bold; border-color: var(--primary);">
+              <option value="ALL">📁 In tất cả các mảng (Tách trang độc lập)</option>
+              <option value="Biomed">🏥 Mảng Biomed (Thiết bị Y tế)</option>
+              <option value="Hạ tầng">⚡ Mảng Hạ tầng (Điện, lạnh, nước, PCCC)</option>
+              <option value="IT">💻 Mảng IT (Mạng, EMR, Máy in, Phần cứng)</option>
+              <option value="Khác">📦 Mảng Khác & Chi phí dự phòng</option>
+            </select>
+          </div>
+          <button class="btn" onclick="triggerPrint()">🖨 In Báo Cáo / Xuất PDF</button>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 18px;">
+          <div>
+            <h1 style="font-size: 20px; font-weight: 800; color: var(--primary);" id="reportMainHeading">BÁO CÁO KỸ THUẬT & NGÂN SÁCH CHI TIẾT</h1>
+            <p style="font-size:12px; color:var(--muted); margin-top: 4px;">Đơn vị: Bệnh viện Mắt Sài Gòn Tây Ninh • Thời điểm lập: <span id="reportDate"></span></p>
+          </div>
+          <div style="text-align: right; font-size: 12px; color: var(--muted);" id="reportFilterNotice">
+            Phạm vi trích xuất: <b>Tất cả các mảng</b>
+          </div>
+        </div>
+
+        <div id="reportContentArea"></div>
+
+        <div style="margin-top: 25px; border-top: 2px dashed #cbd5e1; padding-top: 15px;">
+          <h3 style="font-size: 14px; color: var(--primary); margin-bottom: 10px;">📋 TỔNG HỢP CÔNG NỢ NHÀ CUNG CẤP CẦN XIN Ý KIẾN THANH TOÁN</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Mảng</th>
+                <th>Tên Nhà Cung Cấp</th>
+                <th>Nội dung hợp đồng</th>
+                <th>Giá trị HĐ</th>
+                <th>Đã thanh toán</th>
+                <th>Còn nợ</th>
+                <th>Thời gian đã nợ</th>
+                <th>Ghi chú điều khoản</th>
+              </tr>
+            </thead>
+            <tbody id="reportDebtTable"></tbody>
+          </table>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 6. AI ASSISTANT -->
+    <section id="view-ai" class="view">
+      <div class="ai-layout">
+        <div class="ai-chatbox">
+          <div class="ai-logs" id="aiLogs">
+            <div class="ai-msg bot">
+              <strong>Xin chào! Tôi là Trợ lý MSG AI Kỹ Thuật.</strong><br>
+              Tôi đang theo dõi đồng bộ cả dữ liệu Ngân sách, Sự cố tồn đọng và Công nợ nhà cung cấp. Bạn cần phân tích dữ liệu nào?
+            </div>
+          </div>
+          <div class="ai-input-bar">
+            <input type="text" id="aiPrompt" placeholder="Nhập câu hỏi: Nhà cung cấp nào nợ lâu nhất?, Tổng nợ hiện tại, Soạn tờ trình..." onkeydown="if(event.key==='Enter') executeAIChat()">
+            <button class="btn" onclick="executeAIChat()">Gửi câu hỏi</button>
+          </div>
+        </div>
+
+        <div class="ai-sidebar">
+          <div class="panel" style="margin-bottom:0;">
+            <div style="background:#e8f5e9; border:1px solid #c8e6c9; padding:8px 12px; border-radius:6px; margin-bottom:12px; font-size:11.5px; color:#2e7d32; font-weight:600;">
+              ✓ Quản lý đồng bộ: Ngân sách + Tồn đọng việc + Công nợ
+            </div>
+
+            <h4 style="font-size:12px; margin-bottom:10px; color:var(--muted); text-transform:uppercase;">Lệnh Phân Tích Nhanh</h4>
+            <button class="quick-btn" onclick="askQuick('Báo cáo chi tiết danh sách các nhà cung cấp đang còn nợ và thời gian nợ lâu nhất')">💳 Phân tích công nợ nhà cung cấp</button>
+            <button class="quick-btn" onclick="askQuick('Báo cáo chi tiết các công việc kỹ thuật đang tồn đọng quá lâu và hướng xử lý')">⚠️ Phân tích các việc tồn quá hạn</button>
+            <button class="quick-btn" onclick="askQuick('Đánh giá tình hình ngân sách và đưa ra khuyến nghị chi tiết')">📊 Phân tích ngân sách tổng thể</button>
+            <button class="quick-btn" onclick="askQuick('Soạn thảo một bản Tờ trình hoàn chỉnh xin Ban Giám Đốc phê duyệt thanh toán công nợ kỹ thuật')">📝 Soạn Tờ trình xin duyệt thanh toán nợ</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<!-- MODAL QUẢN LÝ DATABASE (BACKUP / RESTORE) -->
+<div class="modal" id="dbModal">
+  <div class="modal-box">
+    <h3 style="margin-bottom:8px; font-size:16px;">💾 Quản Lý Sao Lưu Dữ Liệu (Backup)</h3>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">Sao lưu toàn bộ ngân sách, chi phí, công việc và công nợ ra file hoặc phục hồi dữ liệu từ file đã lưu.</p>
+    
+    <div style="margin-bottom: 20px; padding: 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;">
+      <h4 style="font-size: 13px; margin-bottom: 6px; color: var(--primary);">1. Sao lưu dữ liệu (Export)</h4>
+      <p style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px;">Tải toàn bộ cơ sở dữ liệu hiện tại về máy tính dưới dạng tệp JSON.</p>
+      <button class="btn" onclick="exportDatabase()">📥 Tải file sao lưu (JSON)</button>
+    </div>
+
+    <div style="padding: 12px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px;">
+      <h4 style="font-size: 13px; margin-bottom: 6px; color: var(--danger);">2. Phục hồi dữ liệu (Restore)</h4>
+      <p style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px;">Chọn tệp tin JSON đã sao lưu trước đó để nạp lại dữ liệu.</p>
+      <input type="file" id="importFile" accept=".json" style="font-size: 12px; margin-bottom: 10px; display: block;">
+      <button class="btn btn-warning" onclick="importDatabase()">📤 Nạp dữ liệu từ tệp</button>
+    </div>
+
+    <div style="display:flex; justify-content: flex-end; gap:8px; margin-top:18px;">
+      <button class="btn btn-outline" onclick="closeDbModal()">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CÀI ĐẶT NGÂN SÁCH -->
+<div class="modal" id="quotaModal">
+  <div class="modal-box">
+    <h3 style="margin-bottom:8px; font-size:16px;">Thiết Lập Ngân Sách Được Giao</h3>
+    <p style="font-size:12px; color:var(--muted); margin-bottom:15px;">Nhập số tiền dự toán được cấp cho từng mảng kỹ thuật và nguồn dự phòng phát sinh.</p>
+    <div class="form-group"><label>🏥 Ngân Sách Biomed (Trang thiết bị y tế)</label><input type="number" id="quotaBiomed" placeholder="0"></div>
+    <div class="form-group"><label>⚡ Ngân Sách Hạ Tầng (Điện, lạnh, PCCC, nước...)</label><input type="number" id="quotaInfra" placeholder="0"></div>
+    <div class="form-group"><label>💻 Ngân Sách IT (Máy tính, mạng, EMR, máy in...)</label><input type="number" id="quotaIT" placeholder="0"></div>
+    <div class="form-group"><label>📦 Nguồn Ngân Sách Khác / Dự phòng phát sinh</label><input type="number" id="quotaOther" placeholder="0"></div>
+    <div style="display:flex; justify-content: flex-end; gap:8px; margin-top:18px;">
+      <button class="btn btn-outline" onclick="closeQuotaModal()">Hủy</button>
+      <button class="btn" onclick="saveQuotas()">Lưu Ngân Sách</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL THÊM/SỬA KHOẢN CHI -->
+<div class="modal" id="expenseModal">
+  <div class="modal-box">
+    <h3 style="margin-bottom:15px; font-size:16px;" id="modalExpenseTitle">Ghi Nhận Mua Sắm / Sửa Chữa</h3>
+    <input type="hidden" id="editExpenseIndex" value="-1">
+    <div class="form-group">
+      <label>Mảng Kỹ Thuật</label>
+      <select id="inpDomain">
+        <option value="Biomed">Biomed (Máy Phaco, khúc xạ, đèn khe...)</option>
+        <option value="Hạ tầng">Hạ tầng (Điện, lạnh, nước, PCCC...)</option>
+        <option value="IT">IT (Mạng, máy tính, EMR...)</option>
+        <option value="Khác">Khác / Chi phí phát sinh</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tính chất chi phí</label>
+      <select id="inpType">
+        <option value="Bảo trì định kỳ">Bảo trì định kỳ (OPEX)</option>
+        <option value="Sửa chữa đột xuất">Sửa chữa đột xuất / Thay linh kiện</option>
+        <option value="Mua mới thiết bị">Mua mới thiết bị (CAPEX)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Nội dung chi tiết</label><input type="text" id="inpDesc" placeholder="VD: Bảo dưỡng định kỳ máy Phaco"></div>
+    <div style="display:flex; gap:10px;">
+      <div class="form-group" style="flex:1;"><label>Đơn giá (VNĐ)</label><input type="number" id="inpPrice" placeholder="0"></div>
+      <div class="form-group" style="width:70px;"><label>SL</label><input type="number" id="inpQty" value="1"></div>
+    </div>
+    <div class="form-group"><label>Nhà cung cấp / Đơn vị thực hiện</label><input type="text" id="inpVendor" placeholder="VD: Alcon / Phong Vũ"></div>
+    <div style="display:flex; justify-content: flex-end; gap:8px; margin-top:15px;">
+      <button class="btn btn-outline" onclick="closeExpenseModal()">Hủy</button>
+      <button class="btn" onclick="saveExpense()">Lưu Dữ Liệu</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CÔNG VIỆC -->
+<div class="modal" id="taskModal">
+  <div class="modal-box">
+    <h3 style="margin-bottom:15px; font-size:16px;" id="modalTaskTitle">Tiếp Nhận Công Việc / Sự Cố Kỹ Thuật</h3>
+    <input type="hidden" id="editTaskIndex" value="-1">
+    <div class="form-group">
+      <label>Mảng phụ trách</label>
+      <select id="taskDomain">
+        <option value="Biomed">Biomed (Thiết bị y tế, nhãn khoa)</option>
+        <option value="Hạ tầng">Hạ tầng (Điện nguồn, lạnh, nước, PCCC)</option>
+        <option value="IT">IT (Phần mềm EMR/HIS, mạng, máy tính, in)</option>
+        <option value="Khác">Khác / Mua sắm vật tư</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Mức độ quan trọng / Khẩn cấp</label>
+      <select id="taskPriority">
+        <option value="Bình thường">🟢 Bình thường</option>
+        <option value="Quan trọng">🟡 Quan trọng (Cần xong sớm)</option>
+        <option value="Khẩn cấp">🔴 Khẩn cấp (Ngừng trệ khám/mổ)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Nội dung sự vụ / Yêu cầu sửa chữa</label><input type="text" id="taskDesc" placeholder="VD: Đèn khe phòng khám 3 bị mờ bóng"></div>
+    <div style="display:flex; gap:10px;">
+      <div class="form-group" style="flex:1;"><label>Ngày tiếp nhận</label><input type="date" id="taskDate"></div>
+      <div class="form-group" style="flex:1;"><label>Người phụ trách xử lý</label><input type="text" id="taskAssignee" placeholder="Tên kỹ thuật viên"></div>
+    </div>
+    <div class="form-group">
+      <label>Trạng thái tiến độ</label>
+      <select id="taskStatus">
+        <option value="Chờ xử lý">Chờ xử lý (Chưa thực hiện)</option>
+        <option value="Đang làm">Đang làm / Chờ vật tư thay thế</option>
+        <option value="Hoàn thành">Hoàn thành (Đã nghiệm thu)</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Ghi chú nguyên nhân tồn đọng / Vướng mắc</label><textarea id="taskNote" rows="2" placeholder="VD: Đang chờ báo giá linh kiện..."></textarea></div>
+    <div style="display:flex; justify-content: flex-end; gap:8px; margin-top:15px;">
+      <button class="btn btn-outline" onclick="closeTaskModal()">Hủy</button>
+      <button class="btn" onclick="saveTask()">Lưu Công Việc</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CÔNG NỢ -->
+<div class="modal" id="debtModal">
+  <div class="modal-box">
+    <h3 style="margin-bottom:15px; font-size:16px;" id="modalDebtTitle">Ghi Nhận Hợp Đồng & Công Nợ Nhà Cung Cấp</h3>
+    <input type="hidden" id="editDebtIndex" value="-1">
+    <div class="form-group">
+      <label>Mảng Kỹ Thuật</label>
+      <select id="debtDomain">
+        <option value="Biomed">Biomed (Thiết bị y tế)</option>
+        <option value="Hạ tầng">Hạ tầng (Điện lạnh, PCCC, nước)</option>
+        <option value="IT">IT (Phần mềm, mạng, máy in)</option>
+        <option value="Khác">Khác / Mua ngoài</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Tên Nhà Cung Cấp / Đối Tác</label>
+      <input type="text" id="debtVendor" placeholder="VD: Công ty TNHH Alcon Việt Nam">
+    </div>
+    <div class="form-group">
+      <label>Nội dung Hợp đồng / Mua sắm dịch vụ</label>
+      <input type="text" id="debtDesc" placeholder="VD: HĐ Bảo trì máy Phaco năm 2026">
+    </div>
+    <div style="display:flex; gap:10px;">
+      <div class="form-group" style="flex:1;">
+        <label>Giá trị Hợp đồng (VNĐ)</label>
+        <input type="number" id="debtContractValue" placeholder="0" oninput="calculateDebtRemain()">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label>Số tiền Đã thanh toán (VNĐ)</label>
+        <input type="number" id="debtPaidValue" placeholder="0" oninput="calculateDebtRemain()">
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <div class="form-group" style="flex:1;">
+        <label>Số tiền Còn nợ (Tự tính)</label>
+        <input type="text" id="debtRemainPreview" readonly style="background:#f1f5f9; font-weight:bold; color:var(--danger);" value="0 đ">
+      </div>
+      <div class="form-group" style="flex:1;">
+        <label>Ngày ký HĐ / Ngày hóa đơn</label>
+        <input type="date" id="debtDate">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Ghi chú điều khoản / Đợt thanh toán</label>
+      <textarea id="debtNote" rows="2" placeholder="VD: Đã thanh toán đợt 1 (50%), đợt 2 nghiệm thu thanh toán nốt..."></textarea>
+    </div>
+    <div style="display:flex; justify-content: flex-end; gap:8px; margin-top:15px;">
+      <button class="btn btn-outline" onclick="closeDebtModal()">Hủy</button>
+      <button class="btn" onclick="saveDebt()">Lưu Công Nợ</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMBEDDED_KEY = "AQ.Ab8RN6I5HNu5RopRAJFFkOHZqvS5f8vrBWYG6XJs8tliO4-rQA";
+
+let defaultQuotas = { "Biomed": 800000000, "Hạ tầng": 450000000, "IT": 350000000, "Khác": 0 };
+let storedQuotas = JSON.parse(localStorage.getItem('msg_quotas')) || {};
+let quotas = Object.assign({}, defaultQuotas, storedQuotas);
+let expenses = JSON.parse(localStorage.getItem('msg_expenses')) || [];
+
+let tasks = JSON.parse(localStorage.getItem('msg_tasks')) || [
+  { date: '2026-08-20', domain: 'Biomed', priority: 'Khẩn cấp', desc: 'Máy Phaco phòng mổ 1 báo lỗi áp lực tưới hút', assignee: 'KTV Kỹ thuật', status: 'Đang làm', note: 'Chờ kỹ sư hãng gửi van thay thế' },
+  { date: '2026-08-28', domain: 'Hạ tầng', priority: 'Quan trọng', desc: 'Máy lạnh trung tâm khu tiếp nhận phả hơi yếu', assignee: 'KTV Điện lạnh', status: 'Chờ xử lý', note: 'Cần vệ sinh dàn nóng tầng thượng' }
+];
+
+let debts = JSON.parse(localStorage.getItem('msg_debts')) || [
+  { date: '2026-05-15', domain: 'Biomed', vendor: 'Công ty Alcon Việt Nam', desc: 'Bảo trì máy phẫu thuật Phaco định kỳ', contractValue: 120000000, paidValue: 60000000, note: 'Còn nợ 50% sau khi hoàn thành nghiệm thu' },
+  { date: '2026-06-10', domain: 'Hạ tầng', vendor: 'Cơ Điện Lạnh Miền Nam', desc: 'Thay thế block dàn nóng trung tâm tầng 2', contractValue: 45000000, paidValue: 45000000, note: 'Đã hoàn tất thanh toán 100%' },
+  { date: '2026-07-01', domain: 'IT', vendor: 'Phong Vũ Tech', desc: 'Cung cấp 5 bộ máy vi tính phòng khám', contractValue: 65000000, paidValue: 30000000, note: 'Hẹn thanh toán nốt sau 30 ngày' }
+];
+
+function money(num) {
+  return new Intl.NumberFormat('vi-VN').format(Number(num) || 0) + ' đ';
+}
+
+function calculateDaysPending(dateStr, status) {
+  if (status === 'Hoàn thành') return 0;
+  const created = new Date(dateStr);
+  const now = new Date();
+  return Math.ceil(Math.abs(now - created) / (1000 * 60 * 60 * 24));
+}
+
+function calculateDebtDays(dateStr, remainValue) {
+  if (remainValue <= 0) return 0;
+  const start = new Date(dateStr);
+  const now = new Date();
+  return Math.max(0, Math.ceil((now - start) / (1000 * 60 * 60 * 24)));
+}
+
+function switchView(viewId, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + viewId).classList.add('active');
+  if(btn) btn.classList.add('active');
+
+  const titles = {
+    'dashboard': 'Tổng quan Giám sát Ngân sách Kỹ thuật',
+    'tasks': 'Theo dõi Công việc Kỹ thuật & Quản lý Tồn đọng',
+    'expenses': 'Sổ Chi Tiết Mua Sắm & Bảo Trì',
+    'debts': 'Sổ Quản Lý Công Nợ Hợp Đồng Nhà Cung Cấp',
+    'report': 'Báo Cáo Chi Tiết Từng Mảng Kỹ Thuật',
+    'ai': 'Trợ Lý MSG AI Kỹ Thuật'
+  };
+  document.getElementById('topTitle').innerText = titles[viewId];
+  
+  const topActions = document.getElementById('topActionBtns');
+  if(viewId === 'tasks') {
+    topActions.innerHTML = `
+      <button class="btn btn-warning" onclick="openDbModal()">💾 Quản lý DB</button>
+      <button class="btn btn-outline" onclick="triggerPrint()">🖨 In Báo Cáo</button>
+      <button class="btn btn-success" onclick="openTaskModal()">＋ Tiếp nhận việc mới</button>
+    `;
+  } else if(viewId === 'debts') {
+    topActions.innerHTML = `
+      <button class="btn btn-warning" onclick="openDbModal()">💾 Quản lý DB</button>
+      <button class="btn btn-outline" onclick="exportDebtToExcel()">📊 Xuất File Excel</button>
+      <button class="btn btn-success" onclick="openDebtModal()">＋ Thêm hợp đồng / công nợ</button>
+    `;
+  } else if(viewId === 'report') {
+    topActions.innerHTML = `
+      <button class="btn btn-warning" onclick="openDbModal()">💾 Quản lý DB</button>
+      <button class="btn btn-outline" onclick="triggerPrint()">🖨 In Báo Cáo / Xuất PDF</button>
+    `;
+  } else {
+    topActions.innerHTML = `
+      <button class="btn btn-warning" onclick="openDbModal()">💾 Quản lý DB</button>
+      <button class="btn btn-outline" onclick="openQuotaModal()">⚙️ Cài đặt ngân sách</button>
+      <button class="btn btn-success" onclick="openExpenseModal()">＋ Nhập khoản mua sắm</button>
+    `;
+  }
+
+  if(viewId === 'report') renderExecutiveReport();
+  if(viewId === 'debts') renderDebts();
+}
+
+function refreshAll() {
+  renderDashboard();
+  renderTasks();
+  renderExpenses();
+  renderDebts();
+}
+
+function triggerPrint() {
+  renderExecutiveReport();
+  const reportTabBtn = document.querySelectorAll('.nav button')[4];
+  switchView('report', reportTabBtn);
+  setTimeout(() => { window.print(); }, 350);
+}
+
+/* DATABASE BACKUP & RESTORE MODAL LOGIC */
+function openDbModal() {
+  document.getElementById('dbModal').style.display = 'flex';
+}
+function closeDbModal() {
+  document.getElementById('dbModal').style.display = 'none';
+}
+
+function exportDatabase() {
+  const dbData = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    quotas: quotas,
+    expenses: expenses,
+    tasks: tasks,
+    debts: debts
+  };
+  const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(dbData, null, 2));
+  const downloadAnchor = document.createElement('a');
+  downloadAnchor.setAttribute("href", dataStr);
+  downloadAnchor.setAttribute("download", `msg_report_backup_${new Date().toISOString().split('T')[0]}.json`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  downloadAnchor.remove();
+}
+
+function importDatabase() {
+  const fileInput = document.getElementById('importFile');
+  if (!fileInput.files.length) {
+    alert('Vui lòng chọn tệp tin JSON sao lưu trước!');
+    return;
+  }
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if(!data.quotas || !data.expenses || !data.tasks || !data.debts) {
+        throw new Error('Cấu trúc file không hợp lệ.');
+      }
+      quotas = data.quotas;
+      expenses = data.expenses;
+      tasks = data.tasks;
+      debts = data.debts;
+
+      localStorage.setItem('msg_quotas', JSON.stringify(quotas));
+      localStorage.setItem('msg_expenses', JSON.stringify(expenses));
+      localStorage.setItem('msg_tasks', JSON.stringify(tasks));
+      localStorage.setItem('msg_debts', JSON.stringify(debts));
+
+      alert('Phục hồi dữ liệu thành công!');
+      closeDbModal();
+      refreshAll();
+    } catch(err) {
+      alert('Lỗi đọc file: Tệp tin không đúng định dạng sao lưu của hệ thống.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* 1. DASHBOARD */
+function renderDashboard() {
+  const totalAllocated = Object.values(quotas).reduce((a, b) => a + b, 0);
+  const totalSpent = expenses.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+  const remain = totalAllocated - totalSpent;
+  const spentPercent = totalAllocated ? ((totalSpent / totalAllocated) * 100).toFixed(1) : 0;
+
+  document.getElementById('kpiTotal').innerText = money(totalAllocated);
+  document.getElementById('kpiSpent').innerText = money(totalSpent);
+  document.getElementById('kpiSpentBar').style.width = Math.min(spentPercent, 100) + '%';
+  document.getElementById('kpiRemain').innerText = money(remain);
+  document.getElementById('kpiRemainPercent').innerText = `Còn ${(100 - spentPercent).toFixed(1)}% dự toán`;
+
+  const statusEl = document.getElementById('kpiStatus');
+  if(spentPercent > 90) statusEl.innerHTML = '<span class="tag alert">⚠️ Báo Động (>90%)</span>';
+  else if(spentPercent > 75) statusEl.innerHTML = '<span class="tag warn">⚡ Cảnh Báo (>75%)</span>';
+  else statusEl.innerHTML = '<span class="tag safe">✓ An Toàn (<75%)</span>';
+
+  const domainBox = document.getElementById('domainCards');
+  domainBox.innerHTML = '';
+  const domainIcons = { 'Biomed': '🏥', 'Hạ tầng': '⚡', 'IT': '💻', 'Khác': '📦' };
+
+  ['Biomed', 'Hạ tầng', 'IT', 'Khác'].forEach(d => {
+    const dQuota = quotas[d] || 0;
+    const dSpent = expenses.filter(x => x.domain === d).reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const dRemain = dQuota - dSpent;
+    const dRate = dQuota ? ((dSpent / dQuota) * 100).toFixed(1) : (dSpent > 0 ? 100 : 0);
+
+    let tagClass = 'safe', tagText = 'An toàn';
+    if(dRate >= 90) { tagClass = 'alert'; tagText = 'Sắp vượt quota'; }
+    else if(dRate >= 75) { tagClass = 'warn'; tagText = 'Cần cân nhắc'; }
+
+    domainBox.innerHTML += `
+      <div class="domain-card">
+        <div class="domain-header">
+          <div class="domain-title">${domainIcons[d] || '📁'} ${d}</div>
+          <span class="tag ${tagClass}">${tagText} (${dRate}%)</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:6px;">
+          <span style="color:var(--muted)">Đã chi: <b>${money(dSpent)}</b></span>
+          <span style="color:var(--muted)">Còn: <b>${money(dRemain)}</b></span>
+        </div>
+        <div class="meter"><i style="width:${Math.min(dRate, 100)}%; background:${dRate >= 90 ? 'var(--danger)' : dRate >= 75 ? 'var(--warn)' : 'var(--good)'}"></i></div>
+        <div style="font-size:11px; color:var(--muted); margin-top:8px;">Hạn mức: ${money(dQuota)}</div>
+      </div>
+    `;
+  });
+
+  const recent = [...expenses].reverse().slice(0, 5);
+  document.getElementById('recentTable').innerHTML = recent.map(r => `
+    <tr>
+      <td>${r.date}</td>
+      <td><span class="tag" style="background:#e0f2fe; color:#0369a1;">${r.domain}</span></td>
+      <td>${r.type}</td>
+      <td>${r.desc}</td>
+      <td><b>${money(r.amount)}</b></td>
+    </tr>
+  `).join('') || '<tr><td colspan="5" style="text-align:center; color:var(--muted);">Chưa có dữ liệu</td></tr>';
+}
+
+/* 2. TASKS */
+function renderTasks() {
+  const dom = document.getElementById('filterTaskDomain').value;
+  const statusFilter = document.getElementById('filterTaskStatus').value;
+  const q = document.getElementById('searchTask').value.toLowerCase();
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  let todayCount = 0, pendingCount = 0, overdueCount = 0, urgentCount = 0;
+
+  tasks.forEach(t => {
+    if(t.date === todayStr) todayCount++;
+    if(t.status !== 'Hoàn thành') {
+      pendingCount++;
+      const days = calculateDaysPending(t.date, t.status);
+      if(days > 7) overdueCount++;
+    }
+    if(t.priority === 'Khẩn cấp' || t.priority === 'Quan trọng') urgentCount++;
+  });
+
+  document.getElementById('kpiTaskToday').innerText = todayCount;
+  document.getElementById('kpiTaskPending').innerText = pendingCount;
+  document.getElementById('kpiTaskOverdue').innerText = overdueCount;
+  document.getElementById('kpiTaskUrgent').innerText = urgentCount;
+
+  const filtered = tasks.map((t, idx) => ({ ...t, originalIndex: idx }))
+  .filter(t => {
+    const days = calculateDaysPending(t.date, t.status);
+    const matchDom = !dom || t.domain === dom;
+    const matchSearch = !q || t.desc.toLowerCase().includes(q) || t.assignee.toLowerCase().includes(q) || (t.note && t.note.toLowerCase().includes(q));
+    let matchStatus = true;
+    if(statusFilter === 'overdue') matchStatus = (t.status !== 'Hoàn thành' && days > 7);
+    else if(statusFilter) matchStatus = (t.status === statusFilter);
+    return matchDom && matchStatus && matchSearch;
+  });
+
+  document.getElementById('taskTable').innerHTML = filtered.map(t => {
+    const days = calculateDaysPending(t.date, t.status);
+    let daysBadge = `<span class="tag gray">Đã xong</span>`;
+    if(t.status !== 'Hoàn thành') {
+      if(days > 7) daysBadge = `<span class="tag alert">⚠️ ${days} ngày (Quá lâu)</span>`;
+      else if(days >= 3) daysBadge = `<span class="tag warn">⏱️ ${days} ngày</span>`;
+      else daysBadge = `<span class="tag safe">✓ ${days} ngày</span>`;
+    }
+
+    let pBadge = `<span class="tag gray">${t.priority}</span>`;
+    if(t.priority === 'Khẩn cấp') pBadge = `<span class="tag alert">🔴 Khẩn cấp</span>`;
+    else if(t.priority === 'Quan trọng') pBadge = `<span class="tag warn">🟡 Quan trọng</span>`;
+
+    let sBadge = `<span class="tag alert">Chờ xử lý</span>`;
+    if(t.status === 'Đang làm') sBadge = `<span class="tag warn">Đang làm</span>`;
+    else if(t.status === 'Hoàn thành') sBadge = `<span class="tag safe">✔️ Hoàn thành</span>`;
+
+    return `
+      <tr>
+        <td>${t.date}</td>
+        <td><b>${t.domain}</b></td>
+        <td>${pBadge}</td>
+        <td><b>${t.desc}</b>${t.note ? `<br><small style="color:var(--muted)">Vướng mắc: ${t.note}</small>` : ''}</td>
+        <td>${daysBadge}</td>
+        <td>${t.assignee || 'Chưa gán'}</td>
+        <td>${sBadge}</td>
+        <td style="text-align:center;">
+          <button class="btn-action" onclick="editTask(${t.originalIndex})">✏️ Sửa</button>
+          <button class="btn-action" onclick="deleteTask(${t.originalIndex})" style="color:var(--danger); margin-left:4px;">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:20px;">Không có công việc nào trong danh sách</td></tr>';
+}
+
+function openTaskModal() {
+  document.getElementById('modalTaskTitle').innerText = "Tiếp Nhận Công Việc Kỹ Thuật";
+  document.getElementById('editTaskIndex').value = "-1";
+  document.getElementById('taskDomain').value = "Biomed";
+  document.getElementById('taskPriority').value = "Bình thường";
+  document.getElementById('taskDesc').value = "";
+  document.getElementById('taskDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('taskAssignee').value = "";
+  document.getElementById('taskStatus').value = "Chờ xử lý";
+  document.getElementById('taskNote').value = "";
+  document.getElementById('taskModal').style.display = 'flex';
+}
+function editTask(idx) {
+  const t = tasks[idx];
+  document.getElementById('modalTaskTitle').innerText = "Cập Nhật Tiến Độ & Vướng Mắc";
+  document.getElementById('editTaskIndex').value = idx;
+  document.getElementById('taskDomain').value = t.domain;
+  document.getElementById('taskPriority').value = t.priority;
+  document.getElementById('taskDesc').value = t.desc;
+  document.getElementById('taskDate').value = t.date;
+  document.getElementById('taskAssignee').value = t.assignee || "";
+  document.getElementById('taskStatus').value = t.status;
+  document.getElementById('taskNote').value = t.note || "";
+  document.getElementById('taskModal').style.display = 'flex';
+}
+function closeTaskModal() { document.getElementById('taskModal').style.display = 'none'; }
+function saveTask() {
+  const editIdx = parseInt(document.getElementById('editTaskIndex').value);
+  const domain = document.getElementById('taskDomain').value;
+  const priority = document.getElementById('taskPriority').value;
+  const desc = document.getElementById('taskDesc').value.trim();
+  const date = document.getElementById('taskDate').value || new Date().toISOString().split('T')[0];
+  const assignee = document.getElementById('taskAssignee').value.trim();
+  const status = document.getElementById('taskStatus').value;
+  const note = document.getElementById('taskNote').value.trim();
+  if(!desc) { alert('Vui lòng điền nội dung công việc!'); return; }
+  const taskObj = { domain, priority, desc, date, assignee, status, note };
+  if(editIdx >= 0) tasks[editIdx] = taskObj;
+  else tasks.unshift(taskObj);
+  localStorage.setItem('msg_tasks', JSON.stringify(tasks));
+  closeTaskModal();
+  renderTasks();
+}
+function deleteTask(idx) {
+  if(confirm('Bạn có chắc muốn xóa công việc này?')) {
+    tasks.splice(idx, 1);
+    localStorage.setItem('msg_tasks', JSON.stringify(tasks));
+    renderTasks();
+  }
+}
+
+/* 3. EXPENSES */
+function renderExpenses() {
+  const dom = document.getElementById('filterDomain').value;
+  const q = document.getElementById('searchDesc').value.toLowerCase();
+  const filtered = expenses.map((item, index) => ({...item, originalIndex: index}))
+  .filter(x => (!dom || x.domain === dom) && (!q || x.desc.toLowerCase().includes(q) || x.vendor.toLowerCase().includes(q)));
+
+  document.getElementById('expenseTable').innerHTML = filtered.map(r => `
+    <tr>
+      <td>Tháng ${r.month}</td>
+      <td><b>${r.domain}</b></td>
+      <td>${r.type}</td>
+      <td>${r.desc}</td>
+      <td>${money(r.price)}</td>
+      <td>${r.qty}</td>
+      <td style="color:var(--danger); font-weight:700;">${money(r.amount)}</td>
+      <td>${r.vendor}</td>
+      <td style="text-align:center;">
+        <button class="btn-action" onclick="editExpense(${r.originalIndex})">✏️ Sửa</button>
+        <button class="btn-action" onclick="deleteExpense(${r.originalIndex})" style="color:var(--danger); margin-left:4px;">✕</button>
+      </td>
+    </tr>
+  `).join('') || '<tr><td colspan="9" style="text-align:center; color:var(--muted); padding:20px;">Không tìm thấy khoản chi</td></tr>';
+}
+
+function openExpenseModal() {
+  document.getElementById('modalExpenseTitle').innerText = "Ghi Nhận Mua Sắm / Sửa Chữa";
+  document.getElementById('editExpenseIndex').value = "-1";
+  document.getElementById('inpDesc').value = '';
+  document.getElementById('inpPrice').value = '';
+  document.getElementById('inpQty').value = '1';
+  document.getElementById('inpVendor').value = '';
+  document.getElementById('expenseModal').style.display = 'flex';
+}
+function editExpense(idx) {
+  const item = expenses[idx];
+  document.getElementById('modalExpenseTitle').innerText = "Xem Lại & Chỉnh Sửa Khoản Chi";
+  document.getElementById('editExpenseIndex').value = idx;
+  document.getElementById('inpDomain').value = item.domain;
+  document.getElementById('inpType').value = item.type;
+  document.getElementById('inpDesc').value = item.desc;
+  document.getElementById('inpPrice').value = item.price;
+  document.getElementById('inpQty').value = item.qty;
+  document.getElementById('inpVendor').value = item.vendor;
+  document.getElementById('expenseModal').style.display = 'flex';
+}
+function closeExpenseModal() { document.getElementById('expenseModal').style.display = 'none'; }
+function saveExpense() {
+  const editIdx = parseInt(document.getElementById('editExpenseIndex').value);
+  const domain = document.getElementById('inpDomain').value;
+  const type = document.getElementById('inpType').value;
+  const desc = document.getElementById('inpDesc').value.trim();
+  const price = Number(document.getElementById('inpPrice').value) || 0;
+  const qty = Number(document.getElementById('inpQty').value) || 1;
+  const vendor = document.getElementById('inpVendor').value.trim();
+  if(!desc || price <= 0) { alert('Vui lòng điền nội dung và số tiền hợp lệ!'); return; }
+
+  if(editIdx >= 0) {
+    expenses[editIdx] = { ...expenses[editIdx], domain, type, desc, price, qty, amount: price * qty, vendor: vendor || 'Nội bộ' };
+  } else {
+    expenses.unshift({
+      date: new Date().toLocaleDateString('vi-VN'),
+      month: new Date().getMonth() + 1,
+      domain, type, desc, price, qty,
+      amount: price * qty,
+      vendor: vendor || 'Nội bộ'
+    });
+  }
+  localStorage.setItem('msg_expenses', JSON.stringify(expenses));
+  closeExpenseModal();
+  refreshAll();
+}
+function deleteExpense(idx) {
+  if(confirm('Bạn có chắc muốn xóa khoản chi này?')) {
+    expenses.splice(idx, 1);
+    localStorage.setItem('msg_expenses', JSON.stringify(expenses));
+    refreshAll();
+  }
+}
+
+/* 4. CÔNG NỢ NHÀ CUNG CẤP */
+function calculateDebtRemain() {
+  const contractVal = Number(document.getElementById('debtContractValue').value) || 0;
+  const paidVal = Number(document.getElementById('debtPaidValue').value) || 0;
+  const remain = Math.max(0, contractVal - paidVal);
+  document.getElementById('debtRemainPreview').value = money(remain);
+}
+
+function openDebtModal() {
+  document.getElementById('modalDebtTitle').innerText = "Ghi Nhận Hợp Đồng & Công Nợ Mới";
+  document.getElementById('editDebtIndex').value = "-1";
+  document.getElementById('debtDomain').value = "Biomed";
+  document.getElementById('debtVendor').value = "";
+  document.getElementById('debtDesc').value = "";
+  document.getElementById('debtContractValue').value = "";
+  document.getElementById('debtPaidValue').value = "";
+  document.getElementById('debtRemainPreview').value = "0 đ";
+  document.getElementById('debtDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('debtNote').value = "";
+  document.getElementById('debtModal').style.display = 'flex';
+}
+
+function editDebt(idx) {
+  const d = debts[idx];
+  if(!d) return;
+  document.getElementById('modalDebtTitle').innerText = "Cập Nhật Thanh Toán & Công Nợ";
+  document.getElementById('editDebtIndex').value = idx;
+  document.getElementById('debtDomain').value = d.domain;
+  document.getElementById('debtVendor').value = d.vendor;
+  document.getElementById('debtDesc').value = d.desc;
+  document.getElementById('debtContractValue').value = d.contractValue;
+  document.getElementById('debtPaidValue').value = d.paidValue;
+  calculateDebtRemain();
+  document.getElementById('debtDate').value = d.date;
+  document.getElementById('debtNote').value = d.note || "";
+  document.getElementById('debtModal').style.display = 'flex';
+}
+
+function closeDebtModal() {
+  document.getElementById('debtModal').style.display = 'none';
+}
+
+function saveDebt() {
+  const editIdx = parseInt(document.getElementById('editDebtIndex').value);
+  const domain = document.getElementById('debtDomain').value;
+  const vendor = document.getElementById('debtVendor').value.trim();
+  const desc = document.getElementById('debtDesc').value.trim();
+  const contractValue = Number(document.getElementById('debtContractValue').value) || 0;
+  const paidValue = Number(document.getElementById('debtPaidValue').value) || 0;
+  const date = document.getElementById('debtDate').value || new Date().toISOString().split('T')[0];
+  const note = document.getElementById('debtNote').value.trim();
+
+  if(!vendor || contractValue <= 0) {
+    alert('Vui lòng nhập tên nhà cung cấp và giá trị hợp đồng hợp lệ!');
+    return;
+  }
+
+  const debtObj = { domain, vendor, desc, contractValue, paidValue, date, note };
+
+  if(editIdx >= 0) {
+    debts[editIdx] = debtObj;
+  } else {
+    debts.unshift(debtObj);
+  }
+
+  localStorage.setItem('msg_debts', JSON.stringify(debts));
+  closeDebtModal();
+  renderDebts();
+}
+
+function deleteDebt(idx) {
+  if(confirm('Bạn có chắc muốn xóa hợp đồng / công nợ này?')) {
+    debts.splice(idx, 1);
+    localStorage.setItem('msg_debts', JSON.stringify(debts));
+    renderDebts();
+  }
+}
+
+function renderDebts() {
+  const dom = document.getElementById('filterDebtDomain').value;
+  const statusFilter = document.getElementById('filterDebtStatus').value;
+  const q = document.getElementById('searchDebt').value.toLowerCase();
+
+  let totalContract = 0, totalPaid = 0, totalRemain = 0, overdueCount = 0;
+
+  debts.forEach(d => {
+    const remain = Math.max(0, d.contractValue - d.paidValue);
+    totalContract += Number(d.contractValue) || 0;
+    totalPaid += Number(d.paidValue) || 0;
+    totalRemain += remain;
+    const days = calculateDebtDays(d.date, remain);
+    if(remain > 0 && days > 60) overdueCount++;
+  });
+
+  document.getElementById('kpiDebtTotal').innerText = money(totalContract);
+  document.getElementById('kpiDebtPaid').innerText = money(totalPaid);
+  document.getElementById('kpiDebtRemain').innerText = money(totalRemain);
+  document.getElementById('kpiDebtOverdue').innerText = overdueCount;
+  document.getElementById('kpiDebtPaidPercent').innerText = totalContract ? `Đã trả ${((totalPaid / totalContract)*100).toFixed(1)}%` : 'Đã trả 0%';
+
+  const filtered = debts.map((d, idx) => ({ ...d, originalIndex: idx }))
+  .filter(d => {
+    const remain = Math.max(0, d.contractValue - d.paidValue);
+    const days = calculateDebtDays(d.date, remain);
+    const matchDom = !dom || d.domain === dom;
+    const matchSearch = !q || d.vendor.toLowerCase().includes(q) || d.desc.toLowerCase().includes(q);
+
+    let matchStatus = true;
+    if(statusFilter === 'pending') matchStatus = (remain > 0);
+    else if(statusFilter === 'overdue') matchStatus = (remain > 0 && days > 60);
+    else if(statusFilter === 'cleared') matchStatus = (remain === 0);
+
+    return matchDom && matchSearch && matchStatus;
+  });
+
+  document.getElementById('debtTable').innerHTML = filtered.map(d => {
+    const remain = Math.max(0, d.contractValue - d.paidValue);
+    const days = calculateDebtDays(d.date, remain);
+
+    let statusBadge = '<span class="tag safe">✓ Đã tất toán</span>';
+    let daysBadge = '<span class="tag gray">—</span>';
+
+    if(remain > 0) {
+      statusBadge = '<span class="tag alert">Còn nợ</span>';
+      if(days > 90) {
+        daysBadge = `<span class="tag alert">⚠️ ${days} ngày (>3 tháng)</span>`;
+      } else if(days > 60) {
+        daysBadge = `<span class="tag warn">⏱️ ${days} ngày (>2 tháng)</span>`;
+      } else {
+        daysBadge = `<span class="tag safe">${days} ngày</span>`;
+      }
+    }
+
+    return `
+      <tr>
+        <td>${d.date}</td>
+        <td><b>${d.domain}</b></td>
+        <td><b>${d.vendor}</b></td>
+        <td>${d.desc}${d.note ? `<br><small style="color:var(--muted)">Đk: ${d.note}</small>` : ''}</td>
+        <td><b>${money(d.contractValue)}</b></td>
+        <td style="color:var(--good); font-weight:bold;">${money(d.paidValue)}</td>
+        <td style="color:var(--danger); font-weight:800;">${money(remain)}</td>
+        <td>${daysBadge}</td>
+        <td>${statusBadge}</td>
+        <td style="text-align:center;">
+          <button class="btn-action" title="Xem & Cập nhật thanh toán" onclick="editDebt(${d.originalIndex})">✏️ Sửa</button>
+          <button class="btn-action" title="Xóa" onclick="deleteDebt(${d.originalIndex})" style="color:var(--danger); margin-left:4px;">✕</button>
+        </td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="10" style="text-align:center; color:var(--muted); padding:20px;">Chưa có dữ liệu công nợ</td></tr>';
+}
+
+function exportDebtToExcel() {
+  if(!debts.length) { alert('Chưa có dữ liệu để xuất file!'); return; }
+  const rows = debts.map(d => {
+    const remain = Math.max(0, d.contractValue - d.paidValue);
+    return {
+      'Ngày HĐ': d.date,
+      'Mảng': d.domain,
+      'Nhà Cung Cấp': d.vendor,
+      'Nội dung gói thầu': d.desc,
+      'Giá trị HĐ (VNĐ)': d.contractValue,
+      'Đã thanh toán (VNĐ)': d.paidValue,
+      'Còn nợ (VNĐ)': remain,
+      'Thời gian đã nợ (Ngày)': calculateDebtDays(d.date, remain),
+      'Tình trạng': remain === 0 ? 'Đã tất toán' : 'Còn nợ',
+      'Ghi chú': d.note || ''
+    };
+  });
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Cong_No_Nha_Cung_Cap");
+  XLSX.writeFile(wb, "Cong_No_Nha_Cung_Cap_MSG.xlsx");
+}
+
+/* 5. REPORT BAN GIÁM ĐỐC */
+function renderExecutiveReport() {
+  document.getElementById('reportDate').innerText = new Date().toLocaleDateString('vi-VN');
+  const selectedDomain = document.getElementById('reportDomainFilter').value;
+  const contentArea = document.getElementById('reportContentArea');
+
+  const domainNames = {
+    'Biomed': '🏥 BIOMED (TRANG THIẾT BỊ Y TẾ & NHÃN KHOA)',
+    'Hạ tầng': '⚡ HẠ TẦNG KỸ THUẬT (ĐIỆN, LẠNH, NƯỚC, PCCC)',
+    'IT': '💻 CÔNG NGHỆ THÔNG TIN (MẠNG, EMR, PHẦN CỨNG)',
+    'Khác': '📦 CHI PHÍ KHÁC & DỰ PHÒNG PHÁT SINH'
+  };
+
+  let targetDomains = selectedDomain === 'ALL' ? ['Biomed', 'Hạ tầng', 'IT', 'Khác'] : [selectedDomain];
+  document.getElementById('reportMainHeading').innerText = selectedDomain === 'ALL' ? "BÁO CÁO TỔNG HỢP TOÀN BỘ CÁC MẢNG KỸ THUẬT" : `BÁO CÁO CHI TIẾT: ${domainNames[selectedDomain]}`;
+
+  let html = '';
+  targetDomains.forEach((d, index) => {
+    const q = quotas[d] || 0;
+    const domExpenses = expenses.filter(x => x.domain === d);
+    const s = domExpenses.reduce((a, b) => a + (Number(b.amount) || 0), 0);
+    const r = q - s;
+    const rate = q ? ((s / q) * 100).toFixed(1) : (s > 0 ? '100' : '0');
+    const domTasks = tasks.filter(t => t.domain === d);
+    const pageBreakClass = (selectedDomain === 'ALL' && index > 0) ? 'page-break' : '';
+
+    html += `
+      <div class="domain-report-block ${pageBreakClass}">
+        <div style="background: #f8fafc; border-left: 4px solid var(--primary); padding: 8px 12px; margin-bottom: 12px;">
+          <h2 style="font-size: 15px; color: var(--primary); text-transform: uppercase;">${domainNames[d] || d}</h2>
+        </div>
+
+        <h4 style="font-size: 13px; margin: 10px 0 6px 0; color: #334155;">1. Tình hình Giải ngân & Hạn mức</h4>
+        <table style="margin-bottom: 12px;">
+          <thead>
+            <tr><th>Dự toán duyệt</th><th>Thực chi</th><th>Hạn mức còn lại</th><th>Tỷ lệ giải ngân</th><th>Trạng thái</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>${money(q)}</b></td>
+              <td style="color:var(--danger); font-weight:700;">${money(s)}</td>
+              <td style="color:var(--good); font-weight:700;">${money(r)}</td>
+              <td><b>${rate}%</b></td>
+              <td>${rate >= 90 ? '🔴 Báo động vượt trần' : (rate >= 75 ? '🟡 Cảnh báo' : '🟢 An toàn')}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h4 style="font-size: 13px; margin: 10px 0 6px 0; color: #334155;">2. Sự cố Kỹ thuật & Tồn đọng mảng ${d}</h4>
+        <table style="margin-bottom: 12px;">
+          <thead>
+            <tr><th>Ngày báo</th><th>Mức độ</th><th>Nội dung sự việc</th><th>Thời gian tồn</th><th>Phụ trách</th><th>Trạng thái</th><th>Ghi chú</th></tr>
+          </thead>
+          <tbody>
+            ${domTasks.length ? domTasks.map(t => {
+              const days = calculateDaysPending(t.date, t.status);
+              return `<tr>
+                <td>${t.date}</td><td><b>${t.priority}</b></td><td>${t.desc}</td>
+                <td style="color:${days > 7 ? 'var(--danger)' : 'inherit'}; font-weight:${days > 7 ? 'bold' : 'normal'}">${t.status === 'Hoàn thành' ? 'Đã xong' : `${days} ngày`}</td>
+                <td>${t.assignee || '—'}</td><td>${t.status}</td><td>${t.note || '—'}</td>
+              </tr>`;
+            }).join('') : `<tr><td colspan="7" style="text-align:center; color:var(--muted);">Không có sự cố ghi nhận.</td></tr>`}
+          </tbody>
+        </table>
+
+        <h4 style="font-size: 13px; margin: 10px 0 6px 0; color: #334155;">3. Chi tiết các khoản mua sắm / sửa chữa đã giải ngân</h4>
+        <table>
+          <thead>
+            <tr><th>Ngày chi</th><th>Tính chất</th><th>Nội dung mua sắm</th><th>Đơn giá</th><th>SL</th><th>Thành tiền</th><th>Nhà cung cấp</th></tr>
+          </thead>
+          <tbody>
+            ${domExpenses.length ? domExpenses.map(e => `
+              <tr>
+                <td>${e.date}</td><td>${e.type}</td><td>${e.desc}</td><td>${money(e.price)}</td><td>${e.qty}</td>
+                <td style="font-weight:bold; color:var(--danger);">${money(e.amount)}</td><td>${e.vendor}</td>
+              </tr>
+            `).join('') : `<tr><td colspan="7" style="text-align:center; color:var(--muted);">Chưa phát sinh chi phí.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    `;
+  });
+  contentArea.innerHTML = html;
+
+  const pendingDebts = debts.filter(d => (d.contractValue - d.paidValue) > 0);
+  document.getElementById('reportDebtTable').innerHTML = pendingDebts.map(d => {
+    const remain = d.contractValue - d.paidValue;
+    const days = calculateDebtDays(d.date, remain);
+    return `
+      <tr>
+        <td><b>${d.domain}</b></td>
+        <td><b>${d.vendor}</b></td>
+        <td>${d.desc}</td>
+        <td>${money(d.contractValue)}</td>
+        <td style="color:var(--good);">${money(d.paidValue)}</td>
+        <td style="color:var(--danger); font-weight:bold;">${money(remain)}</td>
+        <td style="color:${days > 60 ? 'var(--danger)' : 'inherit'}; font-weight:${days > 60 ? 'bold' : 'normal'}">${days} ngày</td>
+        <td>${d.note || 'Đúng tiến độ'}</td>
+      </tr>
+    `;
+  }).join('') || '<tr><td colspan="8" style="text-align:center; color:var(--muted); padding:10px;">Toàn bộ công nợ nhà cung cấp đã được thanh toán hết.</td></tr>';
+}
+
+/* 6. AI ASSISTANT */
+function askQuick(text) {
+  document.getElementById('aiPrompt').value = text;
+  executeAIChat();
+}
+
+function runLocalAnalysis(query) {
+  const q = query.toLowerCase();
+
+  if(q.includes("nợ") || q.includes("công nợ") || q.includes("nhà cung cấp")) {
+    const pendingDebts = debts.filter(d => (d.contractValue - d.paidValue) > 0);
+    const totalDebtRemain = pendingDebts.reduce((a, b) => a + (b.contractValue - b.paidValue), 0);
+    let res = `<b>💳 BÁO CÁO CÔNG NỢ NHÀ CUNG CẤP KỸ THUẬT:</b><br><br>
+      • Tổng công nợ còn lại chưa thanh toán: <b style="color:var(--danger)">${money(totalDebtRemain)}</b>.<br>
+      • Số hợp đồng/nhà cung cấp còn nợ: <b>${pendingDebts.length} đối tác</b>.<br><br>`;
+    
+    if(pendingDebts.length > 0) {
+      res += `<b>Danh sách chi tiết cần đối soát:</b><br>` + 
+        pendingDebts.map((d, i) => {
+          const rem = d.contractValue - d.paidValue;
+          const days = calculateDebtDays(d.date, rem);
+          return `${i+1}. <b>${d.vendor}</b>: Nợ <b>${money(rem)}</b> (Đã nợ: <span style="color:var(--danger)">${days} ngày</span> - ${d.desc})`;
+        }).join('<br>');
+    }
+    return res;
+  }
+  else if(q.includes("tờ trình")) {
+    return `<b>TỜ TRÌNH XIN PHÊ DUYỆT THANH TOÁN CÔNG NỢ KỸ THUẬT</b><br><br>
+      <b>Kính gửi:</b> BAN GIÁM ĐỐC BỆNH VIỆN MẮT SÀI GÒN TÂY NINH<br><br>
+      Để đảm bảo tiến độ cung ứng vật tư linh kiện và bảo trì định kỳ các trang thiết bị y tế nhãn khoa, Phòng Kỹ thuật kính trình Ban Giám Đốc xem xét chấp thuận thanh toán các khoản công nợ đến hạn cho các đối tác cung cấp dịch vụ.<br><br>
+      Kính trình Ban Giám Đốc xem xét phê duyệt.`;
+  } else {
+    return `Hệ thống ghi nhận: Hiện có <b>${debts.filter(d=>(d.contractValue-d.paidValue)>0).length} nhà cung cấp còn nợ</b>. Bạn có thể bấm Tab "Quản lý Công nợ NCC" để xem chi tiết!`;
+  }
+}
+
+async function executeAIChat() {
+  const inputEl = document.getElementById('aiPrompt');
+  const query = inputEl.value.trim();
+  if(!query) return;
+
+  const logs = document.getElementById('aiLogs');
+  logs.innerHTML += `<div class="ai-msg user">${query}</div>`;
+  inputEl.value = '';
+  logs.scrollTop = logs.scrollHeight;
+
+  const loadingId = 'loading-' + Date.now();
+  logs.innerHTML += `<div class="ai-msg bot" id="${loadingId}"><em>🤖 AI đang phân tích dữ liệu...</em></div>`;
+  logs.scrollTop = logs.scrollHeight;
+
+  let answered = false;
+  const fallbackTimer = setTimeout(() => {
+    if(!answered) {
+      answered = true;
+      document.getElementById(loadingId).innerHTML = runLocalAnalysis(query);
+      logs.scrollTop = logs.scrollHeight;
+    }
+  }, 3500);
+
+  try {
+    const promptText = `Bạn là Trợ lý BV Mắt Sài Gòn Tây Ninh. Dữ liệu công nợ: ${JSON.stringify(debts)}. Dữ liệu việc: ${JSON.stringify(tasks)}. Hãy trả lời: "${query}"`;
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${encodeURIComponent(EMBEDDED_KEY)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+    });
+    const result = await response.json();
+    if(!answered && result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+      clearTimeout(fallbackTimer);
+      answered = true;
+      let aiText = result.candidates[0].content.parts[0].text.replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<b>$1</b>');
+      document.getElementById(loadingId).innerHTML = `<small style="color:var(--primary); font-size:11px;">[Gemini AI]</small><br><br>` + aiText;
+      logs.scrollTop = logs.scrollHeight;
+    }
+  } catch(e) {
+    if(!answered) {
+      clearTimeout(fallbackTimer);
+      answered = true;
+      document.getElementById(loadingId).innerHTML = runLocalAnalysis(query);
+      logs.scrollTop = logs.scrollHeight;
+    }
+  }
+}
+
+function openQuotaModal() {
+  document.getElementById('quotaBiomed').value = quotas['Biomed'] || 0;
+  document.getElementById('quotaInfra').value = quotas['Hạ tầng'] || 0;
+  document.getElementById('quotaIT').value = quotas['IT'] || 0;
+  document.getElementById('quotaOther').value = quotas['Khác'] || 0;
+  document.getElementById('quotaModal').style.display = 'flex';
+}
+function closeQuotaModal() { document.getElementById('quotaModal').style.display = 'none'; }
+function saveQuotas() {
+  quotas = {
+    "Biomed": Number(document.getElementById('quotaBiomed').value) || 0,
+    "Hạ tầng": Number(document.getElementById('quotaInfra').value) || 0,
+    "IT": Number(document.getElementById('quotaIT').value) || 0,
+    "Khác": Number(document.getElementById('quotaOther').value) || 0
+  };
+  localStorage.setItem('msg_quotas', JSON.stringify(quotas));
+  closeQuotaModal();
+  refreshAll();
+  alert('Đã cập nhật ngân sách thành công!');
+}
+
+function exportToExcel() {
+  if(!expenses.length) { alert('Chưa có dữ liệu để xuất file!'); return; }
+  const rows = expenses.map(e => ({
+    'Tháng': e.month, 'Mảng': e.domain, 'Tính chất': e.type, 'Nội dung': e.desc,
+    'Đơn giá (VNĐ)': e.price, 'Số lượng': e.qty, 'Thành tiền (VNĐ)': e.amount,
+    'Nhà cung cấp': e.vendor, 'Ngày': e.date
+  }));
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Ngan_Sach");
+  XLSX.writeFile(wb, "Bao_Cao_Ngan_Sach_Ky_Thuat_MSG.xlsx");
+}
+
+refreshAll();
+</script>
+</body>
+</html>
